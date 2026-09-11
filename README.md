@@ -11,6 +11,7 @@ Campus Care unifies physical healthcare and mental wellbeing for Lovely Professi
 - **AI chatbot:** A Supabase Edge Function (`supabase/functions/pratiksha-chat`) proxies requests to the Anthropic API so the API key never reaches the browser. Falls back to rule-based canned replies with no key/network.
 - **Video calls:** Embedded Jitsi Meet, one auto-generated room per appointment.
 - **Voice input/output:** Browser-native Web Speech API.
+- **Deployment:** Vercel
 
 There is no custom Node/Express server — the React app talks directly to Supabase using the public **anon key**, and every table is protected by Row Level Security policies (see `supabase/schema.sql`).
 
