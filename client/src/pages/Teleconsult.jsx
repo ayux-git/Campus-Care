@@ -1,8 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Video, Phone, MessageSquare, Send } from 'lucide-react';
+import { Video, Phone, MessageSquare, Send, PhoneCall } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+
+const EMERGENCY_NUMBER = '+911800XXXCARE';
+
+function EmergencyCallButton() {
+  return (
+    <a
+      href={`tel:${EMERGENCY_NUMBER}`}
+      title="Call campus hospital emergency number"
+      className="fixed bottom-5 left-5 z-40 flex items-center gap-2 rounded-full bg-red-600 px-4 py-3 text-white shadow-xl transition hover:bg-red-700"
+    >
+      <span className="relative flex h-3 w-3">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/70" />
+        <span className="relative inline-flex h-3 w-3 rounded-full bg-white" />
+      </span>
+      <PhoneCall size={18} />
+      <span className="hidden text-sm font-semibold sm:inline">Emergency Call</span>
+    </a>
+  );
+}
 
 function ChatOnlySession({ roomName }) {
   const { user, profile } = useAuth();
@@ -86,6 +105,7 @@ export default function Teleconsult() {
         <Link to="/appointments" className="btn-primary mt-6 inline-flex">
           Go to Appointments
         </Link>
+        <EmergencyCallButton />
       </div>
     );
   }
@@ -127,6 +147,7 @@ export default function Teleconsult() {
       <p className="mt-3 text-center text-xs text-slate-400">
         Low bandwidth? You can switch to an audio-only or chat-only session from your appointment booking next time.
       </p>
+      <EmergencyCallButton />
     </div>
   );
 }
