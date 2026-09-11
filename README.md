@@ -96,6 +96,6 @@ Open the printed local URL (default `http://localhost:5173`). Log in with any de
 
 Every table restricts access by the signed-in user's id and role (student/staff, doctor, pharmacy_admin) — see the policies at the bottom of `supabase/schema.sql`. A new `profiles` row is created automatically for every signup via a Postgres trigger, defaulting to the `student` role.
 
-Our Team: Ayush, Rishi, Yachika, Abhedya
-contact us: araj27471@gmail.com
-mobile: 7564965881
+Our Team: Ayush, Rishi, Yachika, Abhedya <br>
+contact us: araj27471@gmail.com <br>
+mobile: 7564965881 <br>
