@@ -27,6 +27,10 @@ export default function Navbar() {
 
   const dashboardLink =
     profile?.role === 'doctor' ? '/doctor' : profile?.role === 'pharmacy_admin' ? '/pharmacy-admin' : null;
+  // Visible to every student/staff account, whether or not they've opted in yet —
+  // that's how they discover the gig in the first place. The page itself prompts
+  // opt-in if they haven't already.
+  const showPartTimeJobs = profile?.role === 'student' || profile?.role === 'staff';
 
   const handleLogout = async () => {
     await logout();
@@ -67,6 +71,18 @@ export default function Navbar() {
               }
             >
               {t('nav.dashboard')}
+            </NavLink>
+          )}
+          {showPartTimeJobs && (
+            <NavLink
+              to="/deliveries"
+              className={({ isActive }) =>
+                `rounded-full px-3 py-2 text-sm font-medium transition ${
+                  isActive ? 'bg-accent-50 text-accent-700' : 'text-accent-600 hover:bg-accent-50'
+                }`
+              }
+            >
+              Part Time Jobs
             </NavLink>
           )}
         </nav>
@@ -127,6 +143,11 @@ export default function Navbar() {
             {dashboardLink && (
               <NavLink to={dashboardLink} onClick={() => setOpen(false)} className="rounded-lg px-3 py-2 text-sm font-medium text-accent-600">
                 {t('nav.dashboard')}
+              </NavLink>
+            )}
+            {showPartTimeJobs && (
+              <NavLink to="/deliveries" onClick={() => setOpen(false)} className="rounded-lg px-3 py-2 text-sm font-medium text-accent-600">
+                Part Time Jobs
               </NavLink>
             )}
             <div className="mt-2 flex items-center gap-2 border-t border-slate-100 pt-3">

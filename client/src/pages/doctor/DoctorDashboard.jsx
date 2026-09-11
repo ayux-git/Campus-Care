@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Video, Camera, CheckCircle, XCircle, Power } from 'lucide-react';
+import { Video, Camera, CheckCircle, XCircle, Power, AlertTriangle, Clock } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
+
+const SEVERITY_COLORS = {
+  mild: 'bg-slate-100 text-slate-600',
+  moderate: 'bg-amber-100 text-amber-700',
+  unsure: 'bg-slate-100 text-slate-600',
+};
 
 const STATUS_COLORS = {
   Requested: 'bg-amber-100 text-amber-700',
@@ -18,6 +24,8 @@ export default function DoctorDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [submissions, setSubmissions] = useState({});
   const [responseDrafts, setResponseDrafts] = useState({});
+  const [woundReports, setWoundReports] = useState([]);
+  const [woundDrafts, setWoundDrafts] = useState({});
 
   const load = async () => {
     const { data: doc } = await supabase.from('doctors').select('*').eq('user_id', user.id).single();
@@ -47,6 +55,17 @@ export default function DoctorDashboard() {
       }
       setSubmissions(grouped);
     }
+
+    const { data: wounds } = await supabase
+      .from('wound_reports')
+      .select('*, profiles(name)')
+      .order('status', { ascending: true })
+      .order('created_at', { ascending: false });
+    for (const w of wounds || []) {
+      const { data } = await supabase.storage.from('photo-submissions').createSignedUrl(w.image_path, 3600);
+      w.url = data?.signedUrl;
+    }
+    setWoundReports(wounds || []);
   };
 
   useEffect(() => {
@@ -68,6 +87,16 @@ export default function DoctorDashboard() {
     const text = responseDrafts[submissionId];
     if (!text) return;
     await supabase.from('photo_submissions').update({ doctor_response: text }).eq('id', submissionId);
+    load();
+  };
+
+  const submitWoundResponse = async (reportId) => {
+    const text = woundDrafts[reportId];
+    if (!text) return;
+    await supabase
+      .from('wound_reports')
+      .update({ doctor_response: text, status: 'Reviewed', responded_by: user.id, responded_at: new Date().toISOString() })
+      .eq('id', reportId);
     load();
   };
 
@@ -178,6 +207,52 @@ export default function DoctorDashboard() {
               ))
             )}
             {Object.keys(submissions).length === 0 && <p className="text-sm text-slate-400">No photo consults submitted yet.</p>}
+          </div>
+
+          <h2 className="mb-3 mt-8 flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-red-600">
+            <AlertTriangle size={14} /> Wound Camera Reviews ({woundReports.filter((w) => w.status === 'Pending').length} pending)
+          </h2>
+          <div className="space-y-3">
+            {woundReports.map((w) => (
+              <div key={w.id} className="card p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-slate-800">
+                    {w.profiles?.name} — {w.body_location || 'unspecified'}
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${SEVERITY_COLORS[w.severity]}`}>{w.severity}</span>
+                    <span
+                      className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                        w.status === 'Reviewed' ? 'bg-teal-100 text-teal-700' : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {w.status === 'Pending' && <Clock size={11} />} {w.status}
+                    </span>
+                  </div>
+                </div>
+                {w.url && <img src={w.url} alt="wound" className="mt-2 max-h-48 w-full rounded-lg object-cover" />}
+                <p className="mt-2 text-sm text-slate-600">"{w.note}"</p>
+                {w.doctor_response ? (
+                  <p className="mt-2 rounded-lg bg-teal-50 p-2 text-xs text-teal-800">
+                    <span className="font-semibold">Your response: </span>
+                    {w.doctor_response}
+                  </p>
+                ) : (
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      className="input !py-1.5 text-xs"
+                      placeholder="Write guidance for this student..."
+                      value={woundDrafts[w.id] || ''}
+                      onChange={(e) => setWoundDrafts((d) => ({ ...d, [w.id]: e.target.value }))}
+                    />
+                    <button onClick={() => submitWoundResponse(w.id)} className="btn-primary !px-3 !py-1.5 text-xs">
+                      Send
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+            {woundReports.length === 0 && <p className="text-sm text-slate-400">No wound camera submissions yet.</p>}
           </div>
 
           {doctor.type === 'therapist' && (

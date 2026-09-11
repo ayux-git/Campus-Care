@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import PratikshaWidget from './components/PratikshaWidget';
+import WoundCameraButton from './components/WoundCameraButton';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import Home from './pages/Home';
@@ -14,6 +15,7 @@ import Teleconsult from './pages/Teleconsult';
 import Pharmacy from './pages/Pharmacy';
 import CampusMap from './pages/CampusMap';
 import Profile from './pages/Profile';
+import MyDeliveries from './pages/MyDeliveries';
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
 import PharmacyAdminDashboard from './pages/pharmacy/PharmacyAdminDashboard';
 
@@ -69,6 +71,14 @@ export default function App() {
             }
           />
           <Route
+            path="/deliveries"
+            element={
+              <ProtectedRoute>
+                <MyDeliveries />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/doctor"
             element={
               <ProtectedRoute roles={['doctor']}>
@@ -87,6 +97,7 @@ export default function App() {
         </Routes>
       </main>
       <Footer />
+      <WoundCameraButton />
       <PratikshaWidget />
     </div>
   );

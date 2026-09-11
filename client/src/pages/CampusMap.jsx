@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Phone, Navigation } from 'lucide-react';
+import { MapPin, Phone, Navigation, Map as MapIcon } from 'lucide-react';
 
+// Positions are percentages over the official LPU campus directory map
+// (client/public/campus-map.jpg), matched to the block numbers in its legend.
 const PINS = [
-  { id: 'hospital', x: 250, y: 120, label: 'Campus Hospital', emoji: '🏥', desc: 'Block 32 — 24x7 emergency & OPD.' },
-  { id: 'pharmacy', x: 320, y: 150, label: 'Campus Pharmacy', emoji: '💊', desc: 'Block 32, Ground Floor — open 8am to 10pm.' },
-  { id: 'counseling', x: 180, y: 200, label: 'Counseling Center', emoji: '🧠', desc: 'Block 26 — confidential mental wellbeing support.' },
-  { id: 'hostel-boys', x: 420, y: 260, label: 'Boys Hostel (BH 1-12)', emoji: '🏠', desc: 'South campus residential blocks.' },
-  { id: 'hostel-girls', x: 90, y: 280, label: 'Girls Hostel (GH 1-9)', emoji: '🏠', desc: 'West campus residential blocks.' },
-  { id: 'admin', x: 250, y: 300, label: 'Admin Block', emoji: '🏛️', desc: 'Block 1 — main administration.' },
+  { id: 'pharmacy', x: 42.4, y: 58.0, label: 'Campus Pharmacy', emoji: '💊', desc: 'Block 4 — open 8am to 10pm, per the campus directory.' },
+  { id: 'hospital', x: 46.4, y: 60.7, label: 'Campus Health Center', emoji: '🏥', desc: 'Block 3 (Physiotherapy) — 24x7 emergency & OPD.' },
+  { id: 'counseling', x: 34.0, y: 45.4, label: 'Student Welfare / Counseling', emoji: '🧠', desc: 'Block 13 — Student Welfare office, confidential wellbeing support.' },
+  { id: 'admin', x: 29.8, y: 36.8, label: 'Administrative Block', emoji: '🏛️', desc: 'Block 30 — Prochancellor\'s office, administration.' },
+  { id: 'hostel-girls', x: 44.7, y: 46.7, label: 'Girls Hostel', emoji: '🏠', desc: 'Block 10, part of the Girls Hostel cluster (9, 10, 11, 12, 21A/B).' },
+  { id: 'hostel-boys', x: 30.7, y: 21.9, label: 'Boys Hostel', emoji: '🏠', desc: 'Block 49, part of the Boys Hostel cluster (45, 48, 49, 50, 51, 52, 53).' },
 ];
 
 const NEARBY = [
@@ -30,30 +32,28 @@ export default function CampusMap() {
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="card overflow-hidden p-3 lg:col-span-2">
-          <svg viewBox="0 0 500 380" className="w-full rounded-xl bg-teal-50/60">
-            <rect x="10" y="10" width="480" height="360" rx="16" fill="#eafaf7" stroke="#b6ebe4" />
-            <rect x="60" y="90" width="120" height="70" rx="8" fill="#d9f5f2" stroke="#86dbd0" />
-            <rect x="280" y="90" width="120" height="80" rx="8" fill="#d9f5f2" stroke="#86dbd0" />
-            <rect x="140" y="170" width="100" height="60" rx="8" fill="#d9f5f2" stroke="#86dbd0" />
-            <rect x="50" y="240" width="100" height="90" rx="8" fill="#d9f5f2" stroke="#86dbd0" />
-            <rect x="370" y="220" width="100" height="90" rx="8" fill="#d9f5f2" stroke="#86dbd0" />
-            <rect x="200" y="270" width="100" height="60" rx="8" fill="#d9f5f2" stroke="#86dbd0" />
+          <div className="relative w-full overflow-hidden rounded-xl bg-amber-50">
+            <img src="/campus-map.jpg" alt="LPU campus directory map" className="block w-full" />
             {PINS.map((p) => (
-              <g
+              <button
                 key={p.id}
-                transform={`translate(${p.x}, ${p.y})`}
                 onClick={() => setSelected(p)}
-                className="cursor-pointer"
+                style={{ left: `${p.x}%`, top: `${p.y}%` }}
+                className="absolute -translate-x-1/2 -translate-y-1/2 transition hover:z-10 hover:scale-110"
+                title={p.label}
               >
-                <circle r="16" fill={selected.id === p.id ? '#fd7712' : '#22877d'} stroke="white" strokeWidth="2" />
-                <text textAnchor="middle" dy="6" fontSize="16">
+                <span
+                  className={`grid h-8 w-8 place-items-center rounded-full border-2 border-white text-base shadow-lg ${
+                    selected.id === p.id ? 'bg-accent-500' : 'bg-teal-600'
+                  }`}
+                >
                   {p.emoji}
-                </text>
-              </g>
+                </span>
+              </button>
             ))}
-          </svg>
+          </div>
           <p className="mt-2 px-1 text-xs text-slate-400">
-            A simplified schematic layout — tap a pin to see details. Not a live GPS map.
+            Official LPU campus directory map — tap a pin to see details. Pin placement is approximate, matched to the block directory, not a live GPS map.
           </p>
         </div>
 
@@ -94,6 +94,21 @@ export default function CampusMap() {
             </div>
           </div>
         ))}
+      </div>
+
+      <h2 className="mt-12 flex items-center gap-2 text-xl font-bold text-slate-800">
+        <MapIcon size={20} className="text-teal-600" /> Find Us on Google Maps
+      </h2>
+      <p className="mt-1 text-sm text-slate-500">A live, real-world map of LPU's location — pan and zoom just like regular Google Maps.</p>
+      <div className="card mt-4 overflow-hidden p-2">
+        <iframe
+          src="https://www.google.com/maps?q=Lovely+Professional+University,+Phagwara,+Punjab&output=embed"
+          title="LPU Campus Location"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          className="h-[400px] w-full rounded-xl sm:h-[450px]"
+          style={{ border: 0 }}
+        />
       </div>
     </div>
   );
