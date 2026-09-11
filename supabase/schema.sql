@@ -224,6 +224,88 @@ create policy "chat_logs_owner_all" on chat_logs for all
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- ============================================================
+-- 8. STUDENT DELIVERY PARTNER PROGRAM
+-- Any student/staff can opt in from their profile, then claim a
+-- "Preparing" pharmacy order, walk it through delivery, and see a
+-- running earnings ledger. Payouts are a mock in-app wallet — no real
+-- payment gateway — which is the right scope for a hackathon demo.
+-- ============================================================
+alter table profiles add column if not exists is_delivery_partner boolean not null default false;
+alter table orders add column if not exists courier_id uuid references profiles(id) on delete set null;
+alter table orders add column if not exists delivery_fee numeric not null default 20;
+
+-- A delivery partner can see unclaimed "Preparing" orders (to browse and
+-- claim) plus any order they've already claimed, regardless of its status.
+drop policy if exists "orders_select_courier" on orders;
+create policy "orders_select_courier" on orders for select using (
+  exists (select 1 from profiles where id = auth.uid() and is_delivery_partner = true)
+  and (courier_id = auth.uid() or (courier_id is null and status = 'Preparing'))
+);
+
+-- Claiming = updating an unclaimed row to set courier_id = self. Once
+-- claimed, only that courier can further update it (e.g. advance status).
+-- The WITH CHECK ensures they can never assign it to someone else.
+drop policy if exists "orders_update_courier" on orders;
+create policy "orders_update_courier" on orders for update using (
+  exists (select 1 from profiles where id = auth.uid() and is_delivery_partner = true)
+  and (courier_id = auth.uid() or (courier_id is null and status = 'Preparing'))
+) with check (
+  courier_id = auth.uid()
+);
+
+-- ============================================================
+-- 9. WOUND CAMERA — async, non-appointment photo triage queue
+-- Separate from photo_submissions (which is tied to a booked
+-- appointment): a lightweight "snap and send" flow for minor injuries,
+-- picked up by any available doctor rather than a specific one.
+-- ============================================================
+create table if not exists wound_reports (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references profiles(id) on delete cascade,
+  image_path text not null, -- path inside the 'photo-submissions' storage bucket
+  body_location text,
+  severity text not null default 'mild' check (severity in ('mild', 'moderate', 'unsure')),
+  note text,
+  status text not null default 'Pending' check (status in ('Pending', 'Reviewed')),
+  doctor_response text,
+  responded_by uuid references profiles(id),
+  created_at timestamptz not null default now(),
+  responded_at timestamptz
+);
+
+alter table wound_reports enable row level security;
+
+drop policy if exists "wound_reports_select" on wound_reports;
+create policy "wound_reports_select" on wound_reports for select using (
+  user_id = auth.uid() or current_role_name() = 'doctor'
+);
+drop policy if exists "wound_reports_insert_own" on wound_reports;
+create policy "wound_reports_insert_own" on wound_reports for insert with check (user_id = auth.uid());
+drop policy if exists "wound_reports_update_doctor" on wound_reports;
+create policy "wound_reports_update_doctor" on wound_reports for update using (current_role_name() = 'doctor');
+
+-- ============================================================
+-- 10. FEEDBACK — a simple write-only mailbox to the developers,
+-- reachable from the footer on every page, logged in or not.
+-- No in-app inbox UI: developers read submissions via the Supabase
+-- Table Editor, so there is deliberately no SELECT policy for regular
+-- users (service_role, used by the dashboard, bypasses RLS anyway).
+-- ============================================================
+create table if not exists feedback (
+  id bigint generated always as identity primary key,
+  user_id uuid references profiles(id) on delete set null,
+  email text,
+  message text not null,
+  page_url text,
+  created_at timestamptz not null default now()
+);
+
+alter table feedback enable row level security;
+
+drop policy if exists "feedback_insert_anyone" on feedback;
+create policy "feedback_insert_anyone" on feedback for insert with check (true);
+
+-- ============================================================
 -- Realtime — let clients subscribe to live changes
 -- ============================================================
 alter publication supabase_realtime add table doctors;
@@ -231,3 +313,4 @@ alter publication supabase_realtime add table appointments;
 alter publication supabase_realtime add table orders;
 alter publication supabase_realtime add table chat_logs;
 alter publication supabase_realtime add table photo_submissions;
+alter publication supabase_realtime add table wound_reports;

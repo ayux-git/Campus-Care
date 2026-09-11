@@ -46,7 +46,7 @@ export default function Footer() {
             <ShieldAlert size={14} />
             <span>{t('footer.disclaimer')}</span>
           </div>
-          <p className="text-xs text-slate-400">Campus Care · Built for LPU · Hackathon Prototype</p>
+          <p className="text-xs text-slate-400">Campus Care · Built for LPU ·</p>
         </div>
 
         <div className="mt-5 border-t border-slate-100 pt-4">
