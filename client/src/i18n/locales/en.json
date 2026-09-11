@@ -1,0 +1,105 @@
+{
+  "app_name": "Campus Care",
+  "nav": {
+    "home": "Home",
+    "health": "Health Tracker",
+    "appointments": "Appointments",
+    "wellbeing": "Mental Wellbeing",
+    "teleconsult": "Teleconsult",
+    "pharmacy": "Pharmacy",
+    "map": "Campus Map",
+    "profile": "Profile",
+    "login": "Login",
+    "logout": "Logout",
+    "dashboard": "Dashboard"
+  },
+  "home": {
+    "title": "Your health, cared for — physical and mental, in one place",
+    "subtitle": "Track vitals, book doctors and counselors, join video consults, order medicine, and chat with Pratiksha — all built for LPU students.",
+    "cta_primary": "Get started",
+    "cta_secondary": "Talk to Pratiksha",
+    "feature_health": "Health Tracker",
+    "feature_health_desc": "Log heart rate, steps, calories, mood and stress with live charts.",
+    "feature_appt": "Appointments",
+    "feature_appt_desc": "Book campus doctors and counselors in a few taps.",
+    "feature_tele": "Teleconsult",
+    "feature_tele_desc": "One-on-one video calls with your doctor via Jitsi Meet.",
+    "feature_pharmacy": "Pharmacy",
+    "feature_pharmacy_desc": "Order medicine for hostel delivery.",
+    "feature_map": "Campus Map",
+    "feature_map_desc": "Find the hospital, pharmacy, and counseling center fast.",
+    "feature_bot": "Pratiksha AI",
+    "feature_bot_desc": "24x7 general wellness guidance in your language."
+  },
+  "auth": {
+    "login_title": "Welcome back",
+    "login_subtitle": "Log in to Campus Care",
+    "email": "Email",
+    "password": "Password",
+    "login_button": "Log in",
+    "demo_accounts": "Demo accounts (password: CampusCare123!)",
+    "signup_prompt": "New here?",
+    "signup_link": "Create an account",
+    "signup_title": "Create your account",
+    "name": "Full name",
+    "role": "I am a",
+    "hostel_block": "Hostel block",
+    "room_no": "Room number",
+    "signup_button": "Sign up",
+    "have_account": "Already have an account?",
+    "login_link": "Log in"
+  },
+  "health_tracker": {
+    "title": "Health Tracker",
+    "tab_physical": "Physical",
+    "tab_mental": "Mental Wellbeing",
+    "heart_rate": "Heart Rate",
+    "steps": "Steps",
+    "calories": "Calories Burned",
+    "today": "Today",
+    "week": "Week",
+    "log_value": "Log a value",
+    "alert_banner": "Your recent health metrics suggest you may want to consult a doctor.",
+    "book_now": "Book an appointment",
+    "mood_checkin": "Daily Mood Check-in",
+    "stress_level": "Stress Level",
+    "journal": "Private Journal",
+    "journal_placeholder": "How are you feeling today? This is just for you.",
+    "save_journal": "Save entry",
+    "resources": "Wellbeing Resources"
+  },
+  "appointments": {
+    "title": "Doctor Appointments",
+    "browse": "Browse by specialty",
+    "book": "Book",
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "status": "Status",
+    "join_call": "Join Call",
+    "cancel": "Cancel"
+  },
+  "pharmacy": {
+    "title": "Campus Pharmacy",
+    "cart": "Cart",
+    "checkout": "Checkout",
+    "hostel_block": "Hostel block",
+    "room_no": "Room number",
+    "place_order": "Place order",
+    "orders": "My Orders",
+    "status": "Status"
+  },
+  "map": {
+    "title": "Campus Map",
+    "nearby_title": "Nearby Hospitals & Pharmacies"
+  },
+  "chatbot": {
+    "name": "Pratiksha",
+    "greeting": "Hi, I'm Pratiksha 👋 How are you feeling today?",
+    "placeholder": "Type your message...",
+    "send": "Send",
+    "emergency": "Urgent — please contact emergency services now"
+  },
+  "footer": {
+    "disclaimer": "Campus Care is a student hackathon prototype. Do not enter real medical information."
+  }
+}
