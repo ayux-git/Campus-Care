@@ -1,8 +1,8 @@
 # Campus Care — LPU Healthcare Platform
 
-Campus Care unifies physical healthcare and mental wellbeing for Lovely Professional University (LPU) students and staff: health tracking, doctor/counselor appointments, video teleconsults, photo-based consults, pharmacy ordering with hostel delivery, an interactive campus map, and Pratiksha — an AI health assistant.
+Campus Care unifies physical healthcare and mental wellbeing for Lovely Professional University (LPU) students and staff: health tracking, doctor/counselor appointments, video teleconsults, photo-based consults, pharmacy ordering with hostel delivery, an interactive campus map, and AI health assistant.
 
-**This is a hackathon prototype.** All accounts, doctors, and health data are fictional demo data. Do not enter real medical information.
+**This is a prototype.** All accounts, doctors, and health data are fictional demo data. Do not enter real medical information.
 
 ## Architecture
 
@@ -44,7 +44,7 @@ supabase/
    supabase functions deploy pratiksha-chat
    supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
    ```
-   Without this, the app still works end-to-end — Pratiksha just uses rule-based replies instead of Claude.
+   Without this, the app still works end-to-end — AI chat just uses rule-based replies instead of Claude.
 
 ## Seed demo data
 
@@ -90,13 +90,13 @@ Open the printed local URL (default `http://localhost:5173`). Log in with any de
 | Pharmacy admin dashboard | `client/src/pages/pharmacy/PharmacyAdminDashboard.jsx` |
 | Campus map + nearby facilities | `client/src/pages/CampusMap.jsx` |
 | Mental wellbeing resources | `client/src/pages/MentalResources.jsx` |
-| Pratiksha AI chatbot | `client/src/components/PratikshaWidget.jsx` + `supabase/functions/pratiksha-chat` |
+| AI chatbot | `client/src/components/PratikshaWidget.jsx` + `supabase/functions/pratiksha-chat` |
 | Multi-language (EN/HI/PA) | `client/src/i18n/` |
 
 ## Notes on Row Level Security
 
 Every table restricts access by the signed-in user's id and role (student/staff, doctor, pharmacy_admin) — see the policies at the bottom of `supabase/schema.sql`. A new `profiles` row is created automatically for every signup via a Postgres trigger, defaulting to the `student` role.
 
-Our Team: Ayush, Rishi, Yachika, Abhedya <br>
-contact us: araj27471@gmail.com <br>
-mobile: 7564965881 <br>
+# Developer : Ayush Raj
+- contact us: araj27471@gmail.com
+- mobile: 7564965881
