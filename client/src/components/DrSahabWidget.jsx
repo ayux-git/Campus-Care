@@ -16,6 +16,26 @@ const OPEN_EVENT = 'drsahab:open';
 
 const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
 
+// Browsers don't expose a voice's gender, so male voices are recognised by
+// name (Windows, Edge online, Chrome, Apple and Android voices).
+const MALE_VOICE =
+  /\b(male|man|ravi|hemant|prabhat|madhur|kunal|aarav|rishi|david|mark|guy|ryan|eric|christopher|brian|andrew|roger|steffan|thomas|george|daniel|alex|aaron|fred|arthur|oliver|james|tom)\b/i;
+const FEMALE_VOICE = /\b(female|woman|zira|heera|neerja|swara|kalpana|lekha|veena|aria|jenny|sonia|susan|hazel|samantha|karen|moira|tessa|victoria|libby)\b/i;
+
+// Best male voice for the language: same locale first, then the same language
+// (English prefers Indian English). Returns null if the device has none.
+function pickMaleVoice(langCode) {
+  const voices = synth?.getVoices() || [];
+  const prefix = langCode.split('-')[0];
+  const male = voices.filter((v) => MALE_VOICE.test(v.name) && !FEMALE_VOICE.test(v.name));
+  const preferred = prefix === 'en' ? ['en-IN', langCode] : [langCode];
+  for (const locale of preferred) {
+    const match = male.find((v) => v.lang?.replace('_', '-') === locale);
+    if (match) return match;
+  }
+  return male.find((v) => v.lang?.startsWith(prefix)) || null;
+}
+
 // Short sentence-sized chunks start sooner and dodge Chrome's habit of
 // stalling on long utterances. Emoji are dropped so they aren't read aloud.
 function speechChunks(text) {
@@ -94,17 +114,31 @@ export default function DrSahabWidget() {
   // recognition callback created earlier) see the current setting.
   const voiceOutRef = useRef(false);
 
-  // Stop talking if the widget unmounts (e.g. a doctor logs in).
-  useEffect(() => () => synth?.cancel(), []);
+  // The voice list loads asynchronously; ask for it early so a male voice is
+  // available for the first reply. Stop talking if the widget unmounts.
+  useEffect(() => {
+    if (!synth) return;
+    const load = () => synth.getVoices();
+    load();
+    synth.addEventListener?.('voiceschanged', load);
+    return () => {
+      synth.removeEventListener?.('voiceschanged', load);
+      synth.cancel();
+    };
+  }, []);
 
   const speak = (text, force = false) => {
     if (!synth || (!force && !voiceOutRef.current)) return;
     // Drop anything still queued so the newest reply starts immediately.
     synth.cancel();
     const lang = LANG_SPEECH_CODE[i18n.language] || 'en-US';
+    const voice = pickMaleVoice(lang);
     for (const chunk of speechChunks(text)) {
       const utter = new SpeechSynthesisUtterance(chunk);
-      utter.lang = lang;
+      utter.lang = voice?.lang || lang;
+      if (voice) utter.voice = voice;
+      // No male voice on this device: lower the default voice a little instead.
+      else utter.pitch = 0.8;
       synth.speak(utter);
     }
   };
