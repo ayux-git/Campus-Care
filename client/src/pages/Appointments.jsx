@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Stethoscope, Brain, Video, MessageSquare, Phone, CalendarPlus } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -78,9 +78,14 @@ function BookingForm({ doctor, onClose, onBooked }) {
   );
 }
 
-function DoctorList({ type, onBooked }) {
+function DoctorList({ type, onBooked, preselectId }) {
   const [doctors, setDoctors] = useState([]);
   const [bookingId, setBookingId] = useState(null);
+
+  // Deep link from Dr Sahab ("/appointments?book=<id>") opens that doctor's form.
+  useEffect(() => {
+    if (preselectId) setBookingId(preselectId);
+  }, [preselectId]);
 
   useEffect(() => {
     supabase
@@ -121,8 +126,15 @@ export default function Appointments() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const preselectId = Number(params.get('book')) || null;
   const [directoryTab, setDirectoryTab] = useState('doctor');
   const [listTab, setListTab] = useState('upcoming');
+
+  useEffect(() => {
+    const type = params.get('type');
+    if (type === 'doctor' || type === 'therapist') setDirectoryTab(type);
+  }, [params]);
   const [appointments, setAppointments] = useState([]);
 
   const loadAppointments = async () => {
@@ -179,7 +191,7 @@ export default function Appointments() {
       </div>
 
       <div className="mt-4">
-        <DoctorList type={directoryTab} onBooked={loadAppointments} />
+        <DoctorList type={directoryTab} onBooked={loadAppointments} preselectId={preselectId} />
       </div>
 
       <div className="mt-12 flex items-center justify-between">

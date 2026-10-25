@@ -11,15 +11,20 @@
     "profile": "Profile",
     "login": "Login",
     "logout": "Logout",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "part_time": "Part Time Jobs",
+    "role_student": "Student",
+    "role_staff": "Staff",
+    "role_doctor": "Doctor portal",
+    "role_pharmacy_admin": "Pharmacy admin"
   },
   "home": {
-    "title": "Your health, cared for — physical and mental, in one place",
-    "subtitle": "Track vitals, book doctors and counselors, join video consults, order medicine, and chat with Pratiksha — all built for LPU students.",
+    "title": "Your physical and mental health, in one place",
+    "subtitle": "Book doctors and counselors, join video consults, order medicine and chat with Dr Sahab. Built for LPU.",
     "cta_primary": "Get started",
-    "cta_secondary": "Talk to Pratiksha",
+    "cta_secondary": "Talk to Dr Sahab",
     "feature_health": "Health Tracker",
-    "feature_health_desc": "Log heart rate, steps, calories, mood and stress with live charts.",
+    "feature_health_desc": "Pair your smartwatch, band or ring in the app to see live vitals.",
     "feature_appt": "Appointments",
     "feature_appt_desc": "Book campus doctors and counselors in a few taps.",
     "feature_tele": "Teleconsult",
@@ -28,8 +33,9 @@
     "feature_pharmacy_desc": "Order medicine for hostel delivery.",
     "feature_map": "Campus Map",
     "feature_map_desc": "Find the hospital, pharmacy, and counseling center fast.",
-    "feature_bot": "Pratiksha AI",
-    "feature_bot_desc": "24x7 general wellness guidance in your language."
+    "feature_bot": "Dr Sahab AI",
+    "feature_bot_desc": "24x7 general wellness guidance in your language.",
+    "features_title": "Everything for your health on campus"
   },
   "auth": {
     "login_title": "Welcome back",
@@ -66,7 +72,22 @@
     "journal": "Private Journal",
     "journal_placeholder": "How are you feeling today? This is just for you.",
     "save_journal": "Save entry",
-    "resources": "Wellbeing Resources"
+    "resources": "Wellbeing Resources",
+    "app_only_badge": "Mobile app only",
+    "app_only_title": "Live vitals are available in the Campus Care app",
+    "app_only_body": "Physical tracking isn't available on the web. Connect your smartwatch, fitness band or smart ring in the mobile app, and your real-time readings will appear here.",
+    "device_watch": "Smartwatch",
+    "device_band": "Fitness band",
+    "device_ring": "Smart ring",
+    "how_title": "How to connect",
+    "how_install": "Install the Campus Care app and log in with this account.",
+    "how_pair": "Pair your wearable over Bluetooth from the app.",
+    "how_live": "Come back here to see heart rate, steps and calories update live.",
+    "app_soon": "App coming soon",
+    "waiting": "Waiting for a device",
+    "connected": "Connected: {{device}}",
+    "last_sync": "Last sync {{time}}",
+    "live": "Live"
   },
   "appointments": {
     "title": "Doctor Appointments",
@@ -93,11 +114,17 @@
     "nearby_title": "Nearby Hospitals & Pharmacies"
   },
   "chatbot": {
-    "name": "Pratiksha",
-    "greeting": "Hi, I'm Pratiksha 👋 How are you feeling today?",
+    "name": "Dr Sahab",
+    "greeting": "Hi, I'm Dr Sahab 👋 How are you feeling today?",
     "placeholder": "Type your message...",
     "send": "Send",
-    "emergency": "Urgent — please contact emergency services now"
+    "emergency": "Urgent: please contact emergency services now",
+    "typing": "Dr Sahab is checking the Merck Manual...",
+    "open": "Open Dr Sahab chat",
+    "disclaimer": "This is only an AI suggestion, not medical advice. Please consult a real doctor.",
+    "book_title": "Book an appointment",
+    "book_all": "See all doctors",
+    "sources": "From the Merck Manual"
   },
   "footer": {
     "disclaimer": "Campus Care is a student hackathon prototype. Do not enter real medical information."

@@ -1,7 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { HeartPulse, Footprints, Flame, AlertTriangle, BookHeart, Smile } from 'lucide-react';
+import {
+  HeartPulse,
+  Footprints,
+  Flame,
+  AlertTriangle,
+  BookHeart,
+  Smile,
+  Smartphone,
+  Watch,
+  Activity,
+  CircleDot,
+  Download,
+  Bluetooth,
+  Radio,
+} from 'lucide-react';
 import StatCard from '../components/StatCard';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -39,6 +53,133 @@ function useHealthAlert(userId) {
   }, [userId]);
 
   return alert;
+}
+
+const DEVICES = [
+  { icon: Watch, label: 'health_tracker.device_watch' },
+  { icon: Activity, label: 'health_tracker.device_band' },
+  { icon: CircleDot, label: 'health_tracker.device_ring' },
+];
+
+const CONNECT_STEPS = [
+  { icon: Download, text: 'health_tracker.how_install' },
+  { icon: Bluetooth, text: 'health_tracker.how_pair' },
+  { icon: Radio, text: 'health_tracker.how_live' },
+];
+
+// Physical tracking is mobile-app only: the app pairs the wearable and writes
+// a wearable_devices row plus health_metrics readings. The web just watches.
+function useWearable(userId) {
+  const [device, setDevice] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+    const load = async () => {
+      const { data } = await supabase
+        .from('wearable_devices')
+        .select('*')
+        .eq('user_id', userId)
+        .order('connected_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setDevice(data || null);
+      setLoading(false);
+    };
+    load();
+    const channel = supabase
+      .channel(`wearable-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wearable_devices', filter: `user_id=eq.${userId}` }, load)
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
+  return { device, loading };
+}
+
+function AppOnlyPanel() {
+  const { t } = useTranslation();
+  return (
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
+      <div className="card p-6 sm:p-8 lg:col-span-3">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">
+          <Smartphone size={14} /> {t('health_tracker.app_only_badge')}
+        </span>
+        <h2 className="mt-4 text-xl font-bold leading-snug text-slate-800 sm:text-2xl">{t('health_tracker.app_only_title')}</h2>
+        <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-slate-600">{t('health_tracker.app_only_body')}</p>
+        <ul className="mt-6 flex flex-wrap gap-2">
+          {DEVICES.map((d) => (
+            <li
+              key={d.label}
+              className="inline-flex items-center gap-2 rounded-full border border-teal-100 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-700"
+            >
+              <d.icon size={16} className="text-teal-600" /> {t(d.label)}
+            </li>
+          ))}
+        </ul>
+        <button disabled className="btn-primary mt-8">
+          {t('health_tracker.app_soon')}
+        </button>
+      </div>
+
+      <div className="card p-6 sm:p-8 lg:col-span-2">
+        <h3 className="text-base font-semibold text-slate-800">{t('health_tracker.how_title')}</h3>
+        <ol className="mt-4 space-y-4">
+          {CONNECT_STEPS.map((step) => (
+            <li key={step.text} className="flex items-start gap-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-teal-50 text-teal-700">
+                <step.icon size={17} />
+              </span>
+              <p className="pt-1.5 text-sm leading-relaxed text-slate-600">{t(step.text)}</p>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-6 rounded-lg bg-slate-50 px-3 py-2.5 text-xs font-medium text-slate-600">{t('health_tracker.waiting')}</p>
+      </div>
+    </div>
+  );
+}
+
+function PhysicalTab() {
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const { device, loading } = useWearable(user?.id);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
+        <div className="h-72 animate-pulse rounded-xl2 bg-slate-100 lg:col-span-3" />
+        <div className="h-72 animate-pulse rounded-xl2 bg-slate-100 lg:col-span-2" />
+      </div>
+    );
+  }
+
+  if (!device) return <AppOnlyPanel />;
+
+  return (
+    <div>
+      <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-teal-100 bg-teal-50 px-4 py-3 text-sm text-teal-800">
+        <Watch size={16} className="shrink-0" />
+        <span className="font-semibold">{t('health_tracker.connected', { device: device.device_name })}</span>
+        {device.last_sync_at && (
+          <span className="text-teal-700">
+            {t('health_tracker.last_sync', { time: new Date(device.last_sync_at).toLocaleString() })}
+          </span>
+        )}
+        <span className="ml-auto inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-teal-500 motion-reduce:animate-none" />
+          {t('health_tracker.live')}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard type="hr" icon={HeartPulse} label={t('health_tracker.heart_rate')} unit="bpm" color="#ee5c08" />
+        <StatCard type="steps" icon={Footprints} label={t('health_tracker.steps')} unit="steps" color="#2ea89a" />
+        <StatCard type="calories" icon={Flame} label={t('health_tracker.calories')} unit="kcal" color="#22877d" />
+      </div>
+    </div>
+  );
 }
 
 function MentalTab() {
@@ -200,11 +341,7 @@ export default function HealthTracker() {
 
       <div className="mt-6">
         {tab === 'physical' ? (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <StatCard type="hr" icon={HeartPulse} label={t('health_tracker.heart_rate')} unit="bpm" color="#ee5c08" />
-            <StatCard type="steps" icon={Footprints} label={t('health_tracker.steps')} unit="steps" color="#2ea89a" />
-            <StatCard type="calories" icon={Flame} label={t('health_tracker.calories')} unit="kcal" color="#22877d" />
-          </div>
+          <PhysicalTab />
         ) : (
           <MentalTab />
         )}

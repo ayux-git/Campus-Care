@@ -30,7 +30,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['"Outfit Variable"', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         card: '0 2px 12px 0 rgb(20 90 85 / 0.08)',

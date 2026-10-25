@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Plus } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 
@@ -14,8 +13,6 @@ export default function StatCard({ type, icon: Icon, label, unit, color }) {
   const { user } = useAuth();
   const [range, setRange] = useState('week');
   const [metrics, setMetrics] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [value, setValue] = useState('');
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -39,20 +36,29 @@ export default function StatCard({ type, icon: Icon, label, unit, color }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range, user]);
 
+  // Readings are written by the mobile app as the wearable syncs; stream them in live.
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`health-${type}-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'health_metrics', filter: `user_id=eq.${user.id}` },
+        ({ new: row }) => {
+          if (row.type === type) setMetrics((prev) => [...prev, row]);
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [type, user]);
+
   const chartData = metrics.map((m) => ({
     label: new Date(m.recorded_at).toLocaleDateString(undefined, { weekday: 'short' }),
     value: m.value,
   }));
   const latest = metrics[metrics.length - 1]?.value ?? '—';
-
-  const logValue = async (e) => {
-    e.preventDefault();
-    if (!value) return;
-    await supabase.from('health_metrics').insert({ user_id: user.id, type, value: Number(value) });
-    setValue('');
-    setShowForm(false);
-    load();
-  };
 
   const barColor = color || COLORS[type] || '#2ea89a';
 
@@ -102,30 +108,6 @@ export default function StatCard({ type, icon: Icon, label, unit, color }) {
           <div className="grid h-full place-items-center text-xs text-slate-400">No data yet</div>
         )}
       </div>
-
-      {showForm ? (
-        <form onSubmit={logValue} className="mt-3 flex gap-2">
-          <input
-            autoFocus
-            type="number"
-            step="any"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            className="input !py-1.5 text-sm"
-            placeholder={`Enter ${label.toLowerCase()}`}
-          />
-          <button type="submit" className="btn-primary !px-3 !py-1.5 text-xs">
-            Save
-          </button>
-        </form>
-      ) : (
-        <button
-          onClick={() => setShowForm(true)}
-          className="mt-3 flex items-center gap-1 text-xs font-semibold text-teal-600 hover:text-teal-700"
-        >
-          <Plus size={13} /> Log a value
-        </button>
-      )}
     </div>
   );
 }

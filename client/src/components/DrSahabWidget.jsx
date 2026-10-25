@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MessageCircle, X, Send, Mic, MicOff, Volume2, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { MessageCircle, X, Send, Mic, MicOff, Volume2, AlertTriangle, CalendarPlus, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +12,36 @@ const SpeechRecognitionAPI =
 
 const LANG_SPEECH_CODE = { en: 'en-US', hi: 'hi-IN', pa: 'pa-IN' };
 
-export default function PratikshaWidget() {
+const OPEN_EVENT = 'drsahab:open';
+
+const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
+
+// Short sentence-sized chunks start sooner and dodge Chrome's habit of
+// stalling on long utterances. Emoji are dropped so they aren't read aloud.
+function speechChunks(text) {
+  const clean = text.replace(/\p{Extended_Pictographic}|•/gu, '');
+  const parts = (clean.match(/[^.!?।]+[.!?।]*/g) || []).map((s) => s.trim()).filter(Boolean);
+  // Merge pieces forward when they're tiny or end in an abbreviation
+  // ("Dr.", "डॉ.", "ਡਾ."), so those don't become a pause mid-sentence.
+  const endsInAbbreviation = (s) => /(^|\s)\S{1,3}\.$/u.test(s);
+  const chunks = [];
+  let carry = '';
+  for (const part of parts) {
+    carry = carry ? `${carry} ${part}` : part;
+    if (carry.length >= 20 && !endsInAbbreviation(carry)) {
+      chunks.push(carry);
+      carry = '';
+    }
+  }
+  if (carry) chunks.push(carry);
+  return chunks;
+}
+
+export function openDrSahab() {
+  window.dispatchEvent(new Event(OPEN_EVENT));
+}
+
+export default function DrSahabWidget() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -20,7 +50,9 @@ export default function PratikshaWidget() {
   const [sending, setSending] = useState(false);
   const [listening, setListening] = useState(false);
   const [voiceOut, setVoiceOut] = useState(false);
-  const [doctorsOnline, setDoctorsOnline] = useState(true);
+  const [availableDoctors, setAvailableDoctors] = useState(null);
+  const doctorsOnline = availableDoctors === null || availableDoctors.length > 0;
+  const navigate = useNavigate();
   const recognitionRef = useRef(null);
   const scrollRef = useRef(null);
 
@@ -32,22 +64,63 @@ export default function PratikshaWidget() {
   }, []);
 
   useEffect(() => {
+    // Doctors who are available now, offered as one-tap booking under each answer.
     supabase
       .from('doctors')
-      .select('id', { count: 'exact', head: true })
+      .select('id, name, specialty, type')
       .eq('available', true)
-      .then(({ count }) => setDoctorsOnline((count ?? 0) > 0));
+      .order('type')
+      .limit(3)
+      .then(({ data }) => setAvailableDoctors(data || []));
   }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, open]);
 
-  const speak = (text) => {
-    if (!voiceOut || typeof window === 'undefined' || !window.speechSynthesis) return;
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = LANG_SPEECH_CODE[i18n.language] || 'en-US';
-    window.speechSynthesis.speak(utter);
+  // Closing the chat stops it talking.
+  useEffect(() => {
+    if (!open) synth?.cancel();
+  }, [open]);
+
+  // Lets other pages (e.g. the Home "Talk to Dr Sahab" button) open the chat.
+  useEffect(() => {
+    const openChat = () => setOpen(true);
+    window.addEventListener(OPEN_EVENT, openChat);
+    return () => window.removeEventListener(OPEN_EVENT, openChat);
+  }, []);
+
+  // A ref, not state, so replies that arrive after a toggle (or from a voice
+  // recognition callback created earlier) see the current setting.
+  const voiceOutRef = useRef(false);
+
+  // Stop talking if the widget unmounts (e.g. a doctor logs in).
+  useEffect(() => () => synth?.cancel(), []);
+
+  const speak = (text, force = false) => {
+    if (!synth || (!force && !voiceOutRef.current)) return;
+    // Drop anything still queued so the newest reply starts immediately.
+    synth.cancel();
+    const lang = LANG_SPEECH_CODE[i18n.language] || 'en-US';
+    for (const chunk of speechChunks(text)) {
+      const utter = new SpeechSynthesisUtterance(chunk);
+      utter.lang = lang;
+      synth.speak(utter);
+    }
+  };
+
+  const toggleVoiceOut = () => {
+    const next = !voiceOutRef.current;
+    voiceOutRef.current = next;
+    setVoiceOut(next);
+    if (!next) {
+      synth?.cancel();
+      return;
+    }
+    // Immediate feedback (and it warms the speech engine inside the click,
+    // which browsers require): read the latest bot message right away.
+    const lastBot = [...messages].reverse().find((m) => m.sender === 'bot');
+    if (lastBot) speak(lastBot.text, true);
   };
 
   const logMessage = async (message, sender) => {
@@ -63,13 +136,19 @@ export default function PratikshaWidget() {
     setSending(true);
     logMessage(trimmed, 'user');
 
+    // Earlier turns (minus the canned greeting) so replies follow the conversation.
+    const history = messages.slice(1).map(({ sender, text }) => ({ sender, text }));
+
     try {
       const { data, error } = await supabase.functions.invoke('pratiksha-chat', {
-        body: { message: trimmed, lang: i18n.language, doctorsOnline },
+        body: { message: trimmed, history, lang: i18n.language, doctorsOnline },
       });
       if (error) throw error;
       const replyText = data?.reply || "Sorry, I couldn't respond right now. Please try again.";
-      setMessages((prev) => [...prev, { sender: 'bot', text: replyText, emergency: !!data?.emergency }]);
+      setMessages((prev) => [
+        ...prev,
+        { sender: 'bot', text: replyText, emergency: !!data?.emergency, sources: data?.sources || [] },
+      ]);
       logMessage(replyText, 'bot');
       speak(replyText);
     } catch (err) {
@@ -82,6 +161,13 @@ export default function PratikshaWidget() {
     } finally {
       setSending(false);
     }
+  };
+
+  const lastBotIndex = messages.reduce((last, m, i) => (m.sender === 'bot' ? i : last), -1);
+
+  const openBooking = (path) => {
+    setOpen(false);
+    navigate(path);
   };
 
   const toggleListening = () => {
@@ -129,7 +215,8 @@ export default function PratikshaWidget() {
               </div>
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setVoiceOut((v) => !v)}
+                  onClick={toggleVoiceOut}
+                  aria-pressed={voiceOut}
                   className={`rounded-full p-1.5 transition ${voiceOut ? 'bg-white/30' : 'hover:bg-white/20'}`}
                   title="Toggle spoken replies"
                 >
@@ -158,11 +245,61 @@ export default function PratikshaWidget() {
                         <AlertTriangle size={14} /> {t('chatbot.emergency')}
                       </div>
                     )}
-                    {m.text}
+                    <p className="whitespace-pre-line">{m.text}</p>
+
+                    {/* Every answer (not the greeting or emergency alerts) carries its sources and the disclaimer. */}
+                    {m.sender === 'bot' && i > 0 && !m.emergency && (
+                      <>
+                        {m.sources?.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            <p className="text-[11px] font-semibold text-slate-500">{t('chatbot.sources')}</p>
+                            {/* Plain labels, not links: students stay inside Campus Care. */}
+                            {m.sources.map((s) => (
+                              <p key={s.url} className="flex items-start gap-1 text-[11px] leading-snug text-slate-600">
+                                <BookOpen size={11} className="mt-0.5 shrink-0 text-teal-700" />
+                                <span className="line-clamp-1">{s.title}</span>
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                        <p className="mt-2 border-t border-slate-100 pt-1.5 text-[11px] leading-snug text-slate-500">
+                          {t('chatbot.disclaimer')}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
-              {sending && <div className="text-xs text-slate-400">Pratiksha is typing...</div>}
+
+              {/* Booking options follow the latest answer. */}
+              {lastBotIndex > 0 && !messages[lastBotIndex].emergency && !sending && (
+                <div className="rounded-2xl border border-teal-100 bg-white p-3 shadow-sm">
+                  <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                    <CalendarPlus size={14} className="text-teal-700" /> {t('chatbot.book_title')}
+                  </p>
+                  <div className="space-y-1.5">
+                    {(availableDoctors || []).map((doc) => (
+                      <button
+                        key={doc.id}
+                        type="button"
+                        onClick={() => openBooking(`/appointments?book=${doc.id}&type=${doc.type}`)}
+                        className="flex w-full items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 py-2 text-left text-xs transition hover:border-teal-300 hover:bg-teal-50"
+                      >
+                        <span className="font-semibold text-slate-800">{doc.name}</span>
+                        <span className="truncate text-slate-500">{doc.specialty}</span>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => openBooking('/appointments')}
+                      className="w-full rounded-xl bg-teal-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-teal-800"
+                    >
+                      {t('chatbot.book_all')}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {sending && <div className="text-xs text-slate-500">{t('chatbot.typing')}</div>}
             </div>
 
             <form
@@ -201,8 +338,8 @@ export default function PratikshaWidget() {
       <motion.button
         whileTap={{ scale: 0.9 }}
         onClick={() => setOpen((v) => !v)}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-500 text-white shadow-xl hover:bg-accent-600"
-        aria-label="Open Pratiksha chatbot"
+        className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-700 text-white shadow-xl hover:bg-accent-800"
+        aria-label={t('chatbot.open')}
       >
         {open ? <X size={22} /> : <MessageCircle size={24} />}
       </motion.button>

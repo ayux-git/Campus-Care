@@ -1,6 +1,6 @@
 # Campus Care — LPU Healthcare Platform
 
-Campus Care unifies physical healthcare and mental wellbeing for Lovely Professional University (LPU) students and staff: health tracking, doctor/counselor appointments, video teleconsults, photo-based consults, pharmacy ordering with hostel delivery, an interactive campus map, and Pratiksha — an AI health assistant.
+Campus Care unifies physical healthcare and mental wellbeing for Lovely Professional University (LPU) students and staff: health tracking, doctor/counselor appointments, video teleconsults, photo-based consults, pharmacy ordering with hostel delivery, an interactive campus map, and Dr Sahab, an AI health assistant.
 
 **This is a hackathon prototype.** All accounts, doctors, and health data are fictional demo data. Do not enter real medical information.
 
@@ -8,7 +8,7 @@ Campus Care unifies physical healthcare and mental wellbeing for Lovely Professi
 
 - **Frontend:** React 18 + Vite + Tailwind CSS, `react-router-dom`, `recharts`, `lucide-react`, `framer-motion`, `i18next` (English / Hindi / Punjabi).
 - **Backend:** [Supabase](https://supabase.com) — Postgres database with Row Level Security, Supabase Auth (email/password), Supabase Storage (photo consults), and Supabase Realtime (live doctor availability, order status, chat).
-- **AI chatbot:** A Supabase Edge Function (`supabase/functions/pratiksha-chat`) proxies requests to the Anthropic API so the API key never reaches the browser. Falls back to rule-based canned replies with no key/network.
+- **AI chatbot:** A Supabase Edge Function (`supabase/functions/pratiksha-chat`) answers with Google Gemini (free tier) from Merck Manual passages, so the API key never reaches the browser. Falls back to rule-based canned replies with no key/network.
 - **Video calls:** Embedded Jitsi Meet, one auto-generated room per appointment.
 - **Voice input/output:** Browser-native Web Speech API.
 
@@ -22,8 +22,10 @@ supabase/
   schema.sql           Tables + Row Level Security policies (run once in the SQL editor)
   storage.sql          Storage bucket + policies for photo consults
   seed.js              Demo data seeder (accounts, doctors, pharmacy items, a week of health metrics)
+  merck_rag.sql        pgvector table + search function for Dr Sahab's Merck Manual knowledge base
+  import_merck.js      Loads the Merck Manual passages (merck/merck_passages.jsonl, git-ignored)
   functions/
-    pratiksha-chat/    Edge Function — Claude proxy + rule-based/emergency fallback
+    pratiksha-chat/    Edge Function — Gemini + Merck Manual search (RAG), rule-based/emergency fallback
 ```
 
 ## One-time Supabase project setup
@@ -36,14 +38,26 @@ supabase/
 3. Open the **SQL Editor** and run, in order:
    - `supabase/schema.sql`
    - `supabase/storage.sql`
-4. (Optional, enables real Claude replies) Install the [Supabase CLI](https://supabase.com/docs/guides/cli), then:
+4. (Optional, enables real AI replies) Install the [Supabase CLI](https://supabase.com/docs/guides/cli), then:
    ```bash
    supabase login
    supabase link --project-ref YOUR-PROJECT-REF
    supabase functions deploy pratiksha-chat
-   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+   supabase secrets set GEMINI_API_KEY=...   # free key from aistudio.google.com
    ```
-   Without this, the app still works end-to-end — Pratiksha just uses rule-based replies instead of Claude.
+   Without this, the app still works end-to-end — Dr Sahab just uses rule-based replies instead of Gemini.
+
+## Dr Sahab's knowledge base (Merck Manual)
+
+Dr Sahab answers only from passages of *The Merck Manual of Diagnosis & Therapy* (19th ed., 2011), found by meaning with pgvector. The passages are private: only the edge function (service role) can search them, and students see Dr Sahab's answers with chapter/page references, never the raw text.
+
+1. Run `supabase/merck_rag.sql` in the SQL editor (after `schema.sql`).
+2. Put the prepared passages file at `supabase/merck/merck_passages.jsonl`. This folder is git-ignored: the book is copyrighted, so never commit or push it.
+3. Load it:
+   ```bash
+   cd supabase
+   npm run import-merck
+   ```
 
 ## Seed demo data
 
@@ -89,7 +103,7 @@ Open the printed local URL (default `http://localhost:5173`). Log in with any de
 | Pharmacy admin dashboard | `client/src/pages/pharmacy/PharmacyAdminDashboard.jsx` |
 | Campus map + nearby facilities | `client/src/pages/CampusMap.jsx` |
 | Mental wellbeing resources | `client/src/pages/MentalResources.jsx` |
-| Pratiksha AI chatbot | `client/src/components/PratikshaWidget.jsx` + `supabase/functions/pratiksha-chat` |
+| Dr Sahab AI chatbot | `client/src/components/DrSahabWidget.jsx` + `supabase/functions/pratiksha-chat` |
 | Multi-language (EN/HI/PA) | `client/src/i18n/` |
 
 ## Notes on Row Level Security

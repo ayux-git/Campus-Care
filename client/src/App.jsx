@@ -1,9 +1,11 @@
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import PratikshaWidget from './components/PratikshaWidget';
+import DrSahabWidget from './components/DrSahabWidget';
 import WoundCameraButton from './components/WoundCameraButton';
 import ProtectedRoute from './components/ProtectedRoute';
+import { useAuth } from './context/AuthContext';
+import { PATIENT_ROLES, isPatient } from './lib/roles';
 
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -20,6 +22,10 @@ import DoctorDashboard from './pages/doctor/DoctorDashboard';
 import PharmacyAdminDashboard from './pages/pharmacy/PharmacyAdminDashboard';
 
 export default function App() {
+  const { user, profile } = useAuth();
+  // Wound camera and Dr Sahab are patient tools; doctors and pharmacy admins don't get them.
+  const showPatientTools = isPatient(user ? profile?.role : null);
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -31,7 +37,7 @@ export default function App() {
           <Route
             path="/health"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute roles={PATIENT_ROLES}>
                 <HealthTracker />
               </ProtectedRoute>
             }
@@ -39,7 +45,7 @@ export default function App() {
           <Route
             path="/appointments"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute roles={PATIENT_ROLES}>
                 <Appointments />
               </ProtectedRoute>
             }
@@ -47,7 +53,7 @@ export default function App() {
           <Route
             path="/teleconsult"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute roles={[...PATIENT_ROLES, 'doctor']}>
                 <Teleconsult />
               </ProtectedRoute>
             }
@@ -55,7 +61,7 @@ export default function App() {
           <Route
             path="/pharmacy"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute roles={PATIENT_ROLES}>
                 <Pharmacy />
               </ProtectedRoute>
             }
@@ -73,7 +79,7 @@ export default function App() {
           <Route
             path="/deliveries"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute roles={PATIENT_ROLES}>
                 <MyDeliveries />
               </ProtectedRoute>
             }
@@ -97,8 +103,8 @@ export default function App() {
         </Routes>
       </main>
       <Footer />
-      <WoundCameraButton />
-      <PratikshaWidget />
+      {showPatientTools && <WoundCameraButton />}
+      {showPatientTools && <DrSahabWidget />}
     </div>
   );
 }

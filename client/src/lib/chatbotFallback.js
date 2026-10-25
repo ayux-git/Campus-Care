@@ -1,6 +1,6 @@
 // Client-side mirror of supabase/functions/pratiksha-chat's rule-based logic.
 // Used when the Edge Function isn't deployed yet, or the network/call fails,
-// so Pratiksha still responds sensibly (including emergency detection) with
+// so Dr Sahab still responds sensibly (including emergency detection) with
 // zero backend dependency.
 
 const EMERGENCY_PATTERNS = [
@@ -29,7 +29,7 @@ const EMERGENCY_NUMBER = '+91-1800-XXX-CARE (Campus Health Center, 24x7)';
 
 const EMERGENCY_MESSAGE_BY_LANG = {
   en: `🚨 This sounds urgent. Please contact the campus health center or emergency services right now: ${EMERGENCY_NUMBER}. If you are with someone else, ask them to help you get there immediately. I'm not able to help with emergencies in chat — please reach out to a real person now.`,
-  hi: `🚨 यह गंभीर लग रहा है। कृपया अभी कैंपस हेल्थ सेंटर या आपातकालीन सेवाओं से संपर्क करें: ${EMERGENCY_NUMBER}। मैं चैट में आपातकालीन स्थिति में मदद नहीं कर सकती।`,
+  hi: `🚨 यह गंभीर लग रहा है। कृपया अभी कैंपस हेल्थ सेंटर या आपातकालीन सेवाओं से संपर्क करें: ${EMERGENCY_NUMBER}। मैं चैट में आपातकालीन स्थिति में मदद नहीं कर सकता।`,
   pa: `🚨 ਇਹ ਗੰਭੀਰ ਲੱਗਦਾ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਹੁਣੇ ਕੈਂਪਸ ਹੈਲਥ ਸੈਂਟਰ ਜਾਂ ਐਮਰਜੈਂਸੀ ਸੇਵਾਵਾਂ ਨਾਲ ਸੰਪਰਕ ਕਰੋ: ${EMERGENCY_NUMBER}।`,
 };
 
@@ -70,8 +70,8 @@ const FALLBACK_RULES = [
 
 const DEFAULT_REPLY = {
   en: "Thanks for sharing that. I can offer general wellness guidance, but I'm not able to diagnose anything. For anything more than minor self-care, it's best to book a real doctor or counselor appointment. Is there anything specific I can help you understand better?",
-  hi: 'यह बताने के लिए धन्यवाद। मैं सामान्य स्वास्थ्य मार्गदर्शन दे सकती हूँ, लेकिन निदान नहीं कर सकती। कृपया एक वास्तविक डॉक्टर या काउंसलर अपॉइंटमेंट बुक करें।',
-  pa: 'ਇਹ ਸਾਂਝਾ ਕਰਨ ਲਈ ਧੰਨਵਾਦ। ਮੈਂ ਆਮ ਸਿਹਤ ਮਾਰਗਦਰਸ਼ਨ ਦੇ ਸਕਦੀ ਹਾਂ, ਪਰ ਨਿਦਾਨ ਨਹੀਂ ਕਰ ਸਕਦੀ।',
+  hi: 'यह बताने के लिए धन्यवाद। मैं सामान्य स्वास्थ्य मार्गदर्शन दे सकता हूँ, लेकिन निदान नहीं कर सकता। कृपया एक वास्तविक डॉक्टर या काउंसलर अपॉइंटमेंट बुक करें।',
+  pa: 'ਇਹ ਸਾਂਝਾ ਕਰਨ ਲਈ ਧੰਨਵਾਦ। ਮੈਂ ਆਮ ਸਿਹਤ ਮਾਰਗਦਰਸ਼ਨ ਦੇ ਸਕਦਾ ਹਾਂ, ਪਰ ਨਿਦਾਨ ਨਹੀਂ ਕਰ ਸਕਦਾ।',
 };
 
 export function detectEmergencyLocal(text) {

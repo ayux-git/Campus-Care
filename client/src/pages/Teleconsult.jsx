@@ -101,11 +101,21 @@ export default function Teleconsult() {
       <div className="mx-auto max-w-xl px-4 py-16 text-center">
         <Video className="mx-auto text-teal-300" size={40} />
         <h1 className="mt-4 text-xl font-bold text-slate-800">No active session</h1>
-        <p className="mt-2 text-sm text-slate-500">Join a call from your confirmed appointments.</p>
-        <Link to="/appointments" className="btn-primary mt-6 inline-flex">
-          Go to Appointments
-        </Link>
-        <EmergencyCallButton />
+        <p className="mt-2 text-sm text-slate-500">
+          {profile?.role === 'doctor'
+            ? 'Start a call from a confirmed appointment on your dashboard.'
+            : 'Join a call from your confirmed appointments.'}
+        </p>
+        {profile?.role === 'doctor' ? (
+          <Link to="/doctor" className="btn-primary mt-6 inline-flex">
+            Go to Dashboard
+          </Link>
+        ) : (
+          <Link to="/appointments" className="btn-primary mt-6 inline-flex">
+            Go to Appointments
+          </Link>
+        )}
+        {profile?.role !== 'doctor' && <EmergencyCallButton />}
       </div>
     );
   }

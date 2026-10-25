@@ -16,7 +16,10 @@ create table if not exists profiles (
 );
 
 -- Auto-create a profile row whenever a new auth user signs up.
--- Role/name are read from the signup call's `options.data` (user metadata).
+-- Name etc. come from the signup call's `options.data` (user metadata), which
+-- the browser controls, so it may only pick 'student' or 'staff'. Privileged
+-- roles ('doctor', 'pharmacy_admin') are read from app metadata, which only the
+-- service role key can set (see seed.js), so nobody can sign up as a doctor.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -27,7 +30,13 @@ begin
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
-    coalesce(new.raw_user_meta_data->>'role', 'student'),
+    case
+      when new.raw_app_meta_data->>'role' in ('student', 'staff', 'doctor', 'pharmacy_admin')
+        then new.raw_app_meta_data->>'role'
+      when new.raw_user_meta_data->>'role' in ('student', 'staff')
+        then new.raw_user_meta_data->>'role'
+      else 'student'
+    end,
     new.raw_user_meta_data->>'hostel_block',
     new.raw_user_meta_data->>'room_no',
     coalesce(new.raw_user_meta_data->>'language_pref', 'en')
@@ -119,7 +128,7 @@ create table if not exists orders (
 );
 
 -- ============================================================
--- 7. CHAT LOGS — Pratiksha conversation history
+-- 7. CHAT LOGS — Dr Sahab conversation history
 -- ============================================================
 create table if not exists chat_logs (
   id bigint generated always as identity primary key,
@@ -175,7 +184,7 @@ create policy "appointments_select" on appointments for select using (
   or doctor_id in (select id from doctors where user_id = auth.uid())
 );
 drop policy if exists "appointments_insert_own" on appointments;
-create policy "appointments_insert_own" on appointments for insert with check (user_id = auth.uid());
+create policy "appointments_insert_own" on appointments for insert with check (user_id = auth.uid() and status = 'Requested');
 drop policy if exists "appointments_update" on appointments;
 create policy "appointments_update" on appointments for update using (
   user_id = auth.uid()
@@ -308,9 +317,109 @@ create policy "feedback_insert_anyone" on feedback for insert with check (true);
 -- ============================================================
 -- Realtime — let clients subscribe to live changes
 -- ============================================================
-alter publication supabase_realtime add table doctors;
-alter publication supabase_realtime add table appointments;
-alter publication supabase_realtime add table orders;
-alter publication supabase_realtime add table chat_logs;
-alter publication supabase_realtime add table photo_submissions;
-alter publication supabase_realtime add table wound_reports;
+-- Guarded so re-running this file on an existing project doesn't stop here
+-- with "relation is already member of publication".
+do $$
+declare t text;
+begin
+  foreach t in array array['doctors', 'appointments', 'orders', 'chat_logs', 'photo_submissions', 'wound_reports'] loop
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = t) then
+      execute format('alter publication supabase_realtime add table %I', t);
+    end if;
+  end loop;
+end;
+$$;
+
+-- ============================================================
+-- 11. PRIVILEGE GUARDS
+-- RLS decides which rows a user may update, not which columns, so these
+-- triggers stop signed-in users from editing fields they must not touch.
+-- They only apply to browser sessions (JWT role 'authenticated'/'anon');
+-- the SQL editor and the service role (seed.js) are unaffected.
+-- ============================================================
+
+-- profiles: users may edit their own name/hostel/language/opt-ins, never their role.
+create or replace function public.guard_profile_update()
+returns trigger
+language plpgsql
+as $$
+begin
+  if coalesce(auth.role(), '') in ('authenticated', 'anon') and new.role is distinct from old.role then
+    raise exception 'role can only be changed by an administrator';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists guard_profile_update on profiles;
+create trigger guard_profile_update
+  before update on profiles
+  for each row execute procedure public.guard_profile_update();
+
+-- appointments: nobody re-assigns the student or doctor; the student may only
+-- cancel; the assigned doctor may change status, mode, slot and room.
+create or replace function public.guard_appointment_update()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if coalesce(auth.role(), '') not in ('authenticated', 'anon') then
+    return new;
+  end if;
+  if new.user_id is distinct from old.user_id
+    or new.doctor_id is distinct from old.doctor_id
+    or new.created_at is distinct from old.created_at then
+    raise exception 'an appointment cannot be moved to another student or doctor';
+  end if;
+  if not exists (select 1 from doctors where id = old.doctor_id and user_id = auth.uid()) then
+    if new.status <> 'Cancelled'
+      or new.slot_time is distinct from old.slot_time
+      or new.mode is distinct from old.mode
+      or new.room_name is distinct from old.room_name
+      or new.reason is distinct from old.reason then
+      raise exception 'students can only cancel an appointment';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists guard_appointment_update on appointments;
+create trigger guard_appointment_update
+  before update on appointments
+  for each row execute procedure public.guard_appointment_update();
+
+-- ============================================================
+-- 12. WEARABLES — devices paired from the Campus Care mobile app
+-- Physical tracking is app-only: the app pairs a smartwatch / band /
+-- ring, writes a row here, then streams readings into health_metrics.
+-- The web Health Tracker shows an "app only" screen until a row exists.
+-- ============================================================
+create table if not exists wearable_devices (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references profiles(id) on delete cascade,
+  device_type text not null check (device_type in ('watch', 'band', 'ring')),
+  device_name text not null,
+  connected_at timestamptz not null default now(),
+  last_sync_at timestamptz
+);
+create index if not exists idx_wearable_devices_user on wearable_devices(user_id, connected_at desc);
+
+alter table wearable_devices enable row level security;
+
+drop policy if exists "wearable_devices_owner_all" on wearable_devices;
+create policy "wearable_devices_owner_all" on wearable_devices for all
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Realtime for the live Health Tracker. Guarded so re-running the file is safe.
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'health_metrics') then
+    alter publication supabase_realtime add table health_metrics;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'wearable_devices') then
+    alter publication supabase_realtime add table wearable_devices;
+  end if;
+end;
+$$;

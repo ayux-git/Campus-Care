@@ -70,6 +70,9 @@ async function upsertUser(account) {
     email: account.email,
     password: DEMO_PASSWORD,
     email_confirm: true,
+    // app_metadata can only be set with the service role key; the signup
+    // trigger trusts the role here, never the user-editable user_metadata.
+    app_metadata: { role: account.role },
     user_metadata: {
       name: account.name,
       role: account.role,
