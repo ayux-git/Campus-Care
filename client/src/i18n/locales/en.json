@@ -20,7 +20,7 @@
   },
   "home": {
     "title": "Your physical and mental health, in one place",
-    "subtitle": "Book doctors and counselors, join video consults, order medicine and chat with Dr Sahab. Built for LPU.",
+    "subtitle": "Book doctors and counselors, join video consults, order medicine and chat with Dr Sahab. Built for LPU",
     "cta_primary": "Get started",
     "cta_secondary": "Talk to Dr Sahab",
     "feature_health": "Health Tracker",
@@ -53,7 +53,22 @@
     "room_no": "Room number",
     "signup_button": "Sign up",
     "have_account": "Already have an account?",
-    "login_link": "Log in"
+    "login_link": "Log in",
+    "or": "or",
+    "google_button": "Continue with Google",
+    "google_redirecting": "Opening Google...",
+    "google_failed": "Google sign-in failed. Please try again.",
+    "otp_title": "Check your email",
+    "otp_sent_to": "We sent a 6-digit code to",
+    "otp_label": "Verification code",
+    "otp_help": "The code expires in 1 hour. Check your spam folder if you can't find it.",
+    "otp_verify": "Verify and continue",
+    "otp_invalid": "That code is wrong or has expired.",
+    "otp_resend": "Resend code",
+    "otp_resend_in": "Resend code in {{seconds}}s",
+    "otp_resent": "A new code is on its way.",
+    "otp_resend_failed": "Couldn't resend the code. Please wait a minute and try again.",
+    "otp_change_email": "Change email"
   },
   "health_tracker": {
     "title": "Health Tracker",
